@@ -7,4 +7,5 @@ requires-python = ">=3.13"
 dependencies = [
     "pyaudio>=0.2.14",
     "rpi-gpio>=0.7.1",
+    "asyncio>=4.0.0",
 ]

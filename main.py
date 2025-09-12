@@ -9,6 +9,7 @@ import os
 import random
 import time
 from datetime import datetime
+import asyncio
 
 # Audio settings that worked in test_audio.py
 CHUNK = 2048
@@ -113,17 +114,17 @@ class SimpleWillow:
             traceback.print_exc()
             return None
 
-    def play_secret(self, filepath=None):
+    def get_secrets(self):
+        return [f for f in os.listdir(SECRETS_DIR) if f.endswith('.wav')]
+
+    def play_random_secret(self):
+        files = self.get_secrets()
+        filepath = os.path.join(SECRETS_DIR, random.choice(files))
+        self.play_secret(filepath)
+        
+    def play_secret(self, filepath):
         """Simple playback function"""
         try:
-            if not filepath:
-                # Get list of secrets
-                files = [f for f in os.listdir(SECRETS_DIR) if f.endswith('.wav')]
-                if not files:
-                    print("❌ No secrets to play!")
-                    return
-                filepath = os.path.join(SECRETS_DIR, random.choice(files))
-            
             print(f"\n🔊 Playing: {os.path.basename(filepath)}")
             
             # Open wave file
@@ -161,7 +162,7 @@ class SimpleWillow:
         print("👋 Cleanup complete")
 
 
-def main():
+def interactive_main():
     print("=" * 50)
     print("SIMPLE WILLOW TEST - No GPIO Required")
     print("=" * 50)
@@ -182,9 +183,9 @@ def main():
         if choice == '1':
             willow.record_secret()
         elif choice == '2':
-            willow.play_secret()
+            willow.play_random_secret()
         elif choice == '3':
-            files = [f for f in os.listdir(SECRETS_DIR) if f.endswith('.wav')]
+            files = willow.get_secrets()
             print(f"\n📚 Found {len(files)} secrets:")
             for f in files:
                 size = os.path.getsize(os.path.join(SECRETS_DIR, f))
@@ -197,6 +198,29 @@ def main():
     willow.cleanup()
     print("Goodbye!")
 
+def art_main():
+    willow = SimpleWillow()
+    loop = asyncio.get_event_loop()
+    asyncio.set_event_loop(loop)
+    loop.create_task(play_secrets_continuously(willow))
+    loop.create_task(record_secrets_on_button(willow))
+    loop.run_forever()
+
+async def play_secrets_continuously(willow):
+    while True:
+        willow.play_random_secret()
+        await asyncio.sleep(3)
+
+async def record_secrets_on_button(willow):
+    while True:
+        print("Press space to play make a recording.")
+        choice = input("...").strip().lower()
+        if choice == ' ':
+            print("Recording secret")
+            willow.record_secret()
+        else:
+            print("Wrong key, dumb ass.")
+        await asyncio.sleep(1)
 
 if __name__ == "__main__":
-    main()
+    art_main()
