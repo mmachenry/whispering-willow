@@ -1,7 +1,6 @@
 #!/usr/bin/env python3
 """
-Whispering Willow - Burn Ready Version
-Optimized for loud environments with motion detection
+Simplified Whispering Willow Test - Just Audio, No GPIO
 """
 
 import pyaudio
@@ -9,194 +8,55 @@ import wave
 import os
 import random
 import time
-import threading
 from datetime import datetime
-import RPi.GPIO as GPIO
-import subprocess
 
-# GPIO pins
-RECORD_MOTION_PIN = 18  # PIR sensor for recording side
-PLAYBACK_MOTION_PIN = 24  # PIR sensor for playback side
-LED_PIN = 12  # PWM pin for LED control
-
-# Audio settings - OPTIMIZED FOR BURN ENVIRONMENT
-CHUNK = 1024
+# Audio settings that worked in test_audio.py
+CHUNK = 2048
 FORMAT = pyaudio.paInt16
 CHANNELS = 1
-RATE = 44100
-RECORD_SECONDS = 15  # Max recording time
-PLAYBACK_VOLUME = 95  # High volume for burn environment
-
-# Timing settings
-MOTION_COOLDOWN = 3  # Seconds between motion detections
-LED_BRIGHTNESS = 80  # LED brightness (0-100)
+RATE = 16000
+RECORD_SECONDS = 5  # Shorter for testing
 
 # Directories
 SECRETS_DIR = "/home/pi/whispering_willow/secrets"
-LOG_FILE = "/home/pi/whispering_willow/activity.log"
+LOG_FILE = "/home/pi/whispering_willow/test.log"
 
-class WhisperingWillow:
+class SimpleWillow:
     def __init__(self):
-        print("🌿 Starting Whispering Willow for NECTR...")
+        print("🌿 Starting Simple Willow Test...")
         
-        # Setup GPIO
-        GPIO.setmode(GPIO.BCM)
-        GPIO.setup(RECORD_MOTION_PIN, GPIO.IN)
-        GPIO.setup(PLAYBACK_MOTION_PIN, GPIO.IN)
-        GPIO.setup(LED_PIN, GPIO.OUT)
-        
-        # Setup PWM for LED control
-        self.led_pwm = GPIO.PWM(LED_PIN, 1000)  # 1kHz frequency
-        self.led_pwm.start(LED_BRIGHTNESS)
-        
-        # Audio setup
         self.audio = pyaudio.PyAudio()
         self.recording = False
         self.playing = False
         
-        # Motion detection timing
-        self.last_record_motion = 0
-        self.last_playback_motion = 0
-        
         # Create directories
         if not os.path.exists(SECRETS_DIR):
             os.makedirs(SECRETS_DIR)
-            
-        # Setup audio devices
-        self.setup_audio_devices()
+            print(f"📁 Created directory: {SECRETS_DIR}")
         
-        # Start background motion detection
-        self.running = True
-        threading.Thread(target=self.motion_detection_loop, daemon=True).start()
-        
-        print("✅ Whispering Willow is awake and listening...")
-        self.log_activity("System started")
-
-    def setup_audio_devices(self):
-        """Find and configure the best audio devices"""
-        print("🎤 Setting up audio devices...")
-        
-        # List available devices
-        print("Available audio devices:")
+        # List audio devices
+        print("\n📊 Audio devices:")
         for i in range(self.audio.get_device_count()):
             info = self.audio.get_device_info_by_index(i)
-            print(f"  {i}: {info['name']} - Inputs: {info['maxInputChannels']}, Outputs: {info['maxOutputChannels']}")
+            print(f"  {i}: {info['name']} - In:{info['maxInputChannels']} Out:{info['maxOutputChannels']}")
         
-        # Auto-select USB devices if available, otherwise use default
-        self.input_device = None
-        self.output_device = None
+        # Use device 0 for input (Samson Go Mic)
+        self.input_device = 1
+        # Use device 1 for output (bcm2835 Headphones)
+        self.output_device = 11
         
-        for i in range(self.audio.get_device_count()):
-            info = self.audio.get_device_info_by_index(i)
-            name = info['name'].lower()
-            
-            # Prefer USB microphones for input
-            if 'usb' in name and info['maxInputChannels'] > 0 and self.input_device is None:
-                self.input_device = i
-                print(f"📥 Using input device: {info['name']}")
-            
-            # Prefer USB/external speakers for output
-            if ('usb' in name or 'speaker' in name) and info['maxOutputChannels'] > 0 and self.output_device is None:
-                self.output_device = i
-                print(f"📤 Using output device: {info['name']}")
-        
-        if self.input_device is None:
-            self.input_device = self.audio.get_default_input_device_info()['index']
-            print("🎤 Using default input device")
-            
-        if self.output_device is None:
-            self.output_device = self.audio.get_default_output_device_info()['index']
-            print("🔊 Using default output device")
-
-    def log_activity(self, message):
-        """Log activity with timestamp"""
-        timestamp = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
-        log_entry = f"{timestamp} - {message}\n"
-        
-        try:
-            with open(LOG_FILE, "a") as f:
-                f.write(log_entry)
-        except:
-            pass  # Don't let logging errors crash the system
-        
-        print(f"📝 {message}")
-
-    def motion_detection_loop(self):
-        """Background thread for motion detection"""
-        while self.running:
-            current_time = time.time()
-            
-            # Check recording side motion
-            if (GPIO.input(RECORD_MOTION_PIN) and 
-                current_time - self.last_record_motion > MOTION_COOLDOWN and
-                not self.recording and not self.playing):
-                
-                self.last_record_motion = current_time
-                self.log_activity("Motion detected on recording side")
-                
-                # Flash LEDs to indicate recording
-                threading.Thread(target=self.flash_leds_recording, daemon=True).start()
-                threading.Thread(target=self.record_secret, daemon=True).start()
-            
-            # Check playback side motion
-            if (GPIO.input(PLAYBACK_MOTION_PIN) and 
-                current_time - self.last_playback_motion > MOTION_COOLDOWN and
-                not self.recording and not self.playing):
-                
-                self.last_playback_motion = current_time
-                self.log_activity("Motion detected on playback side")
-                
-                # Flash LEDs to indicate playback
-                threading.Thread(target=self.flash_leds_playback, daemon=True).start()
-                threading.Thread(target=self.play_random_secret, daemon=True).start()
-            
-            time.sleep(0.1)  # Check 10 times per second
-
-    def flash_leds_recording(self):
-        """Flash LEDs in red pattern for recording"""
-        original_brightness = LED_BRIGHTNESS
-        
-        # Quick red flashes
-        for _ in range(3):
-            self.led_pwm.ChangeDutyCycle(100)  # Bright
-            time.sleep(0.2)
-            self.led_pwm.ChangeDutyCycle(20)   # Dim
-            time.sleep(0.2)
-        
-        # Restore original brightness
-        self.led_pwm.ChangeDutyCycle(original_brightness)
-
-    def flash_leds_playback(self):
-        """Flash LEDs in blue pattern for playback"""
-        original_brightness = LED_BRIGHTNESS
-        
-        # Slow blue pulses
-        for _ in range(2):
-            for brightness in range(20, 100, 10):
-                self.led_pwm.ChangeDutyCycle(brightness)
-                time.sleep(0.1)
-            for brightness in range(100, 20, -10):
-                self.led_pwm.ChangeDutyCycle(brightness)
-                time.sleep(0.1)
-        
-        # Restore original brightness
-        self.led_pwm.ChangeDutyCycle(original_brightness)
+        print(f"\n✅ Using input device: {self.input_device}")
+        print(f"✅ Using output device: {self.output_device}")
 
     def record_secret(self):
-        """Record a secret from the microphone"""
-        if self.recording:
-            return
-            
-        self.recording = True
+        """Simple recording function"""
+        print("\n🎤 Starting recording...")
+        
+        timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
+        filename = f"{SECRETS_DIR}/secret_{timestamp}.wav"
         
         try:
-            # Generate unique filename
-            timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
-            filename = f"{SECRETS_DIR}/secret_{timestamp}.wav"
-            
-            self.log_activity(f"Recording secret to {filename}")
-            
-            # Open audio stream
+            # Open stream - exactly like test_audio.py
             stream = self.audio.open(
                 format=FORMAT,
                 channels=CHANNELS,
@@ -206,58 +66,70 @@ class WhisperingWillow:
                 frames_per_buffer=CHUNK
             )
             
+            print("Recording for 5 seconds... Speak now!")
             frames = []
             
-            # Record for specified duration
-            for i in range(0, int(RATE / CHUNK * RECORD_SECONDS)):
-                data = stream.read(CHUNK)
-                frames.append(data)
+            # Record
+            for i in range(int(RATE / CHUNK * RECORD_SECONDS)):
+                try:
+                    data = stream.read(CHUNK)
+                    frames.append(data)
+                    
+                    # Progress indicator
+                    if i % 10 == 0:
+                        print(".", end="", flush=True)
+                except IOError as e:
+                    print(f"\nIOError: {e}")
+                    # Continue anyway
+                    frames.append(b'\x00' * CHUNK * 2)
+            
+            print("\n✅ Recording complete!")
             
             # Close stream
             stream.stop_stream()
             stream.close()
             
-            # Save to file
-            wf = wave.open(filename, 'wb')
-            wf.setnchannels(CHANNELS)
-            wf.setsampwidth(self.audio.get_sample_size(FORMAT))
-            wf.setframerate(RATE)
-            wf.writeframes(b''.join(frames))
-            wf.close()
-            
-            self.log_activity(f"Secret recorded successfully: {filename}")
+            # Save file
+            if frames:
+                wf = wave.open(filename, 'wb')
+                wf.setnchannels(CHANNELS)
+                wf.setsampwidth(self.audio.get_sample_size(FORMAT))
+                wf.setframerate(RATE)
+                wf.writeframes(b''.join(frames))
+                wf.close()
+                
+                # Verify file
+                if os.path.exists(filename):
+                    size = os.path.getsize(filename)
+                    print(f"📝 Saved: {filename} ({size} bytes)")
+                    return filename
+                else:
+                    print("❌ File not saved!")
+                    return None
             
         except Exception as e:
-            self.log_activity(f"Recording error: {e}")
-        
-        finally:
-            self.recording = False
+            print(f"❌ Recording error: {e}")
+            import traceback
+            traceback.print_exc()
+            return None
 
-    def play_random_secret(self):
-        """Play a random secret through speakers"""
-        if self.playing:
-            return
-            
-        self.playing = True
-        
+    def play_secret(self, filepath=None):
+        """Simple playback function"""
         try:
-            # Get list of all recorded secrets
-            secret_files = [f for f in os.listdir(SECRETS_DIR) if f.endswith('.wav')]
+            if not filepath:
+                # Get list of secrets
+                files = [f for f in os.listdir(SECRETS_DIR) if f.endswith('.wav')]
+                if not files:
+                    print("❌ No secrets to play!")
+                    return
+                filepath = os.path.join(SECRETS_DIR, random.choice(files))
             
-            if not secret_files:
-                self.log_activity("No secrets available to play")
-                return
-            
-            # Choose random secret
-            secret_file = random.choice(secret_files)
-            filepath = os.path.join(SECRETS_DIR, secret_file)
-            
-            self.log_activity(f"Playing secret: {secret_file}")
+            print(f"\n🔊 Playing: {os.path.basename(filepath)}")
             
             # Open wave file
             wf = wave.open(filepath, 'rb')
             
-            # Open audio stream for playback
+            # Open stream for playback
             stream = self.audio.open(
                 format=self.audio.get_format_from_width(wf.getsampwidth()),
                 channels=wf.getnchannels(),
@@ -266,98 +138,65 @@ class WhisperingWillow:
                 output_device_index=self.output_device
             )
             
-            # Set high volume for burn environment
-            self.set_system_volume(PLAYBACK_VOLUME)
-            
-            # Play audio
+            # Play
             data = wf.readframes(CHUNK)
             while data:
                 stream.write(data)
                 data = wf.readframes(CHUNK)
             
-            # Close streams
             stream.stop_stream()
             stream.close()
             wf.close()
             
-            self.log_activity(f"Finished playing: {secret_file}")
+            print("✅ Playback complete!")
             
         except Exception as e:
-            self.log_activity(f"Playback error: {e}")
-        
-        finally:
-            self.playing = False
-
-    def set_system_volume(self, volume):
-        """Set system volume (0-100)"""
-        try:
-            # Use amixer to set volume
-            subprocess.run(['amixer', 'set', 'Master', f'{volume}%'], 
-                         capture_output=True, check=True)
-        except:
-            pass  # Don't let volume control errors crash the system
-
-    def get_stats(self):
-        """Get current system statistics"""
-        secret_count = len([f for f in os.listdir(SECRETS_DIR) if f.endswith('.wav')])
-        
-        return {
-            'secrets_recorded': secret_count,
-            'system_status': 'Running',
-            'recording': self.recording,
-            'playing': self.playing,
-            'led_brightness': LED_BRIGHTNESS
-        }
+            print(f"❌ Playback error: {e}")
+            import traceback
+            traceback.print_exc()
 
     def cleanup(self):
-        """Clean shutdown"""
-        self.running = False
-        time.sleep(1)  # Give threads time to finish
-        
-        self.led_pwm.stop()
-        GPIO.cleanup()
+        """Clean up"""
         self.audio.terminate()
-        
-        self.log_activity("System shutdown complete")
-
-    def test_recording_manually(self):
-        """Test recording without motion sensors"""
-        print("🧪 Manual recording test - speak now!")
-        self.record_secret()
-        
-        # Wait for recording to finish
-        while self.recording:
-            time.sleep(0.1)
-        
-        print("🔊 Playing back recording...")
-        self.play_random_secret()
+        print("👋 Cleanup complete")
 
 
 def main():
-    willow = None
-    try:
-        # Create and start the Whispering Willow
-        willow = WhisperingWillow()
+    print("=" * 50)
+    print("SIMPLE WILLOW TEST - No GPIO Required")
+    print("=" * 50)
+    
+    willow = SimpleWillow()
+    
+    while True:
+        print("\n" + "=" * 50)
+        print("Options:")
+        print("  1 - Record a secret (5 seconds)")
+        print("  2 - Play random secret")
+        print("  3 - List all secrets")
+        print("  q - Quit")
+        print("=" * 50)
+        
+        choice = input("Choose: ").strip().lower()
+        
+        if choice == '1':
+            willow.record_secret()
+        elif choice == '2':
+            willow.play_secret()
+        elif choice == '3':
+            files = [f for f in os.listdir(SECRETS_DIR) if f.endswith('.wav')]
+            print(f"\n📚 Found {len(files)} secrets:")
+            for f in files:
+                size = os.path.getsize(os.path.join(SECRETS_DIR, f))
+                print(f"  - {f} ({size} bytes)")
+        elif choice == 'q':
+            break
+        else:
+            print("Invalid choice!")
+    
+    willow.cleanup()
+    print("Goodbye!")
 
-        print("🧪 Testing recording in 3 seconds...")
-        time.sleep(3)
-        willow.test_recording_manually()
-        
-        # Keep the main thread alive
-        while True:
-            time.sleep(10)
-            stats = willow.get_stats()
-            print(f"📊 Status: {stats['secrets_recorded']} secrets recorded")
-            
-    except KeyboardInterrupt:
-        print("\n🌙 Shutting down Whispering Willow...")
-        
-    except Exception as e:
-        print(f"❌ Unexpected error: {e}")
-        
-    finally:
-        if willow:
-            willow.cleanup()
 
 if __name__ == "__main__":
     main()
