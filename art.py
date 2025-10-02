@@ -79,5 +79,26 @@ except Exception as e:
 # MAIN LOOP: continuous playback
 # -----------------------------
 try:
-    print("[MAIN] Starting playback loop. Press bu
+    print("[MAIN] Starting playback loop. Press button to record.")
+    while True:
+        try:
+            w.play_random_secret()   # blocking until file finishes
+        except Exception as e:
+            print(f"[MAIN] Playback error: {e}")
+            time.sleep(1.0)
+
+except KeyboardInterrupt:
+    print("\n[MAIN] Interrupted. Cleaning up...")
+
+finally:
+    try:
+        GPIO.remove_event_detect(BUTTON_PIN)
+    except Exception:
+        pass
+    GPIO.cleanup()
+    try:
+        w.audio.terminate()
+    except Exception:
+        pass
+    print("[MAIN] Shutdown complete.")
 
