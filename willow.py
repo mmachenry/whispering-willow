@@ -14,6 +14,8 @@ RECORD_SECONDS = 5  # Shorter for testing
 class Willow:
     def __init__(self):
         self.audio = pyaudio.PyAudio()
+        self.is_recording = False
+
         if not os.path.exists(SECRETS_DIR):
             os.makedirs(SECRETS_DIR)
 
@@ -51,12 +53,16 @@ class Willow:
         print("Playing secret: ", filepath)
         self.play_audio_file(filepath)
 
-    def record_secret(self):
+    def stop_recording_secret(self):
+        self.is_recording = False
+
+    def start_recording_secret(self):
+        self.is_recording = True
         timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
         filename = f"{SECRETS_DIR}/secret_{timestamp}.wav"
+        print("Now recording: " filename)
 
         try:
-            # Open stream - exactly like test_audio.py
             stream = self.audio.open(
                 format=FORMAT,
                 channels=CHANNELS,
@@ -66,22 +72,11 @@ class Willow:
                 frames_per_buffer=CHUNK
             )
 
-            print("Recording for 5 seconds... Speak now!")
             frames = []
-
             # Record
-            for i in range(int(RATE / CHUNK * RECORD_SECONDS)):
-                try:
-                    data = stream.read(CHUNK)
-                    frames.append(data)
-
-                    # Progress indicator
-                    if i % 10 == 0:
-                        print(".", end="", flush=True)
-                except IOError as e:
-                    print(f"\nIOError: {e}")
-                    # Continue anyway
-                    frames.append(b'\x00' * CHUNK * 2)
+            while self.is_recording:
+                data = stream.read(CHUNK)
+                frames.append(data)
 
             # Close stream
             stream.stop_stream()
@@ -107,7 +102,3 @@ class Willow:
 
         except Exception as e:
             print(f"Recording error: {e}")
-            import traceback
-            traceback.print_exc()
-            return None
-
