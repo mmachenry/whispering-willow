@@ -60,7 +60,7 @@ class Willow:
         self.is_recording = True
         timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
         filename = f"{SECRETS_DIR}/secret_{timestamp}.wav"
-        print("Now recording: " filename)
+        print("Now recording: ", filename)
 
         try:
             stream = self.audio.open(
