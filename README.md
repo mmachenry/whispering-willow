@@ -14,6 +14,11 @@ Code to support the Weeping Willow art project at NECTR 2025
     source venv/bin/activate
     pip install pyaudio
 
+To get the latest code from Github to the RaspberryPi
+
+    cd /home/ivyblossom/src/whispering-willow
+    git pull origin main
+
 # Notes on current setup
 To get the project to work, boot the RaspberryPi, ensure that it's on a
 WiFi network. Currently it auto logs on to PGH's WiFi and Magneato's home
