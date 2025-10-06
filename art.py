@@ -1,8 +1,12 @@
 import threading
 import time
+import random
 import sys
 import RPi.GPIO as GPIO
 import willow
+
+MIN_SECRET_DELAY = 4
+MAX_SECRET_DELAY = 6
 
 GPIO_MODE = GPIO.BCM
 BUTTON_PIN = 4
@@ -60,6 +64,7 @@ try:
     while True:
         try:
             w.play_random_secret()   # blocking until file finishes
+            time.sleep(random.randint(MIN_SECRET_DELAY, MAX_SECRET_DELAY))
         except Exception as e:
             print(f"[MAIN] Playback error: {e}")
             time.sleep(1.0)
