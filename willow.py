@@ -4,11 +4,11 @@ import random
 import os
 from datetime import datetime
 
-SECRETS_DIR = "/home/ivyblossom/secrets"
-CHUNK = 2048
+SECRETS_DIR = "/home/whisperer/secrets"
+CHUNK = 4096
 FORMAT = pyaudio.paInt16
 CHANNELS = 1
-RATE = 16000
+RATE = 44100
 RECORD_SECONDS = 5  # Shorter for testing
 
 class Willow:
@@ -22,9 +22,18 @@ class Willow:
         self.input_device = None
         for i in range(self.audio.get_device_count()):
             info = self.audio.get_device_info_by_index(i)
+            print("mic device", info['name'])
             if 'Samson Go Mic' in info['name']:
                 self.input_device = i
                 print("Found microphone: ", i)
+            elif 'ATR4697-USB: USB Audio' in info['name']:
+                self.input_device = i
+                print("Device:", info["name"])
+                print("Max input channels:", info["maxInputChannels"])
+                print("Default sample rate:", info["defaultSampleRate"])
+                print("Found microphone: ", i)
+            else:
+                print("Device not used:", info["name"])
         if self.input_device is None:
            print("No input device found")
 
