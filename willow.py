@@ -76,7 +76,7 @@ class Willow:
                 channels=self.channels,
                 rate=self.rate,
                 input=True,
-                input_device_index=self.input_device,
+                input_device_index=self.input_device_index,
                 frames_per_buffer=self.chunk
             )
 
