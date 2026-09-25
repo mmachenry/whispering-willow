@@ -38,16 +38,17 @@ class Willow:
 
     def play_audio_file(self, filepath):
         wf = wave.open(filepath, 'rb')
+        playback_chunk = max(1024, round(self.rate * 0.050))
         stream = self.audio.open(
             format = self.audio.get_format_from_width(wf.getsampwidth()),
             channels = wf.getnchannels(),
             rate = wf.getframerate(),
             output = True,
         )
-        data = wf.readframes(self.chunk)
+        data = wf.readframes(playback_chunk)
         while data:
             stream.write(data)
-            data = wf.readframes(self.chunk)
+            data = wf.readframes(playback_chunk)
         stream.stop_stream()
         stream.close()
         wf.close()
