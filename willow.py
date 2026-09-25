@@ -5,36 +5,36 @@ import os
 from datetime import datetime
 
 SECRETS_DIR = "/home/whisperer/secrets"
-CHUNK = 4096
-FORMAT = pyaudio.paInt16
-CHANNELS = 1
-RATE = 44100
 
 class Willow:
     def __init__(self):
         self.audio = pyaudio.PyAudio()
         self.is_recording = False
-
         if not os.path.exists(SECRETS_DIR):
             os.makedirs(SECRETS_DIR)
 
-        self.input_device = None
-        for i in range(self.audio.get_device_count()):
-            info = self.audio.get_device_info_by_index(i)
-            print("mic device", info['name'])
-            if 'Samson Go Mic' in info['name']:
-                self.input_device = i
-                print("Found microphone: ", i)
-            elif 'ATR4697-USB: USB Audio' in info['name']:
-                self.input_device = i
-                print("Device:", info["name"])
-                print("Max input channels:", info["maxInputChannels"])
-                print("Default sample rate:", info["defaultSampleRate"])
-                print("Found microphone: ", i)
-            else:
-                print("Device not used:", info["name"])
-        if self.input_device is None:
-           print("No input device found")
+        # Audio configuration
+        self.channels = 1
+
+        # Find the system's default input device.
+        self.input_device = self.audio.get_default_input_device_info()
+        self.input_device_index = self.input_device["index"]
+
+        # Use the device's advertised default sample rate.
+        self.rate = int(self.input_device["defaultSampleRate"])
+
+        # Use 16-bit signed PCM.
+        self.format = pyaudio.paInt16
+
+        # Aim for about 20 ms of audio per chunk.
+        self.chunk = max(256, round(self.rate * 0.020))
+        print("Default input device:")
+        print(f" Name: {self.input_device['name']}")
+        print(f" Index: {self.input_device_index}")
+        print(f" Channels: {self.input_device['maxInputChannels']}")
+        print(f" Default rate: {self.rate}")
+        print(f" Format: paInt16")
+        print(f" Chunk: {self.chunk} frames (~20 ms)")
 
     def play_audio_file(self, filepath):
         wf = wave.open(filepath, 'rb')
@@ -44,10 +44,10 @@ class Willow:
             rate = wf.getframerate(),
             output = True,
         )
-        data = wf.readframes(CHUNK)
+        data = wf.readframes(self.chunk)
         while data:
             stream.write(data)
-            data = wf.readframes(CHUNK)
+            data = wf.readframes(self.chunk)
         stream.stop_stream()
         stream.close()
         wf.close()
@@ -72,18 +72,18 @@ class Willow:
 
         try:
             stream = self.audio.open(
-                format=FORMAT,
-                channels=CHANNELS,
-                rate=RATE,
+                format=self.format,
+                channels=self.channels,
+                rate=self.rate,
                 input=True,
                 input_device_index=self.input_device,
-                frames_per_buffer=CHUNK
+                frames_per_buffer=self.chunk
             )
 
             frames = []
             # Record
             while self.is_recording:
-                data = stream.read(CHUNK)
+                data = stream.read(self.chunk)
                 frames.append(data)
 
             # Close stream
@@ -93,9 +93,9 @@ class Willow:
             # Save file
             if frames:
                 wf = wave.open(filename, 'wb')
-                wf.setnchannels(CHANNELS)
-                wf.setsampwidth(self.audio.get_sample_size(FORMAT))
-                wf.setframerate(RATE)
+                wf.setnchannels(self.channels)
+                wf.setsampwidth(self.audio.get_sample_size(self.format))
+                wf.setframerate(self.rate)
                 wf.writeframes(b''.join(frames))
                 wf.close()
 
