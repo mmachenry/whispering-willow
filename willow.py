@@ -9,7 +9,6 @@ CHUNK = 4096
 FORMAT = pyaudio.paInt16
 CHANNELS = 1
 RATE = 44100
-RECORD_SECONDS = 5  # Shorter for testing
 
 class Willow:
     def __init__(self):
