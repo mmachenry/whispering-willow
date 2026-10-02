@@ -3,6 +3,7 @@ import wave
 import random
 import os
 from datetime import datetime
+import playback
 
 SECRETS_DIR = "/home/whisperer/secrets"
 
@@ -36,31 +37,8 @@ class Willow:
         print(f" Format: paInt16")
         print(f" Chunk: {self.chunk} frames (~20 ms)")
 
-    def play_audio_file(self, filepath):
-        wf = wave.open(filepath, 'rb')
-        playback_chunk = max(1024, round(self.rate * 0.050))
-        stream = self.audio.open(
-            format = self.audio.get_format_from_width(wf.getsampwidth()),
-            channels = wf.getnchannels(),
-            rate = wf.getframerate(),
-            output = True,
-        )
-        data = wf.readframes(playback_chunk)
-        while data:
-            stream.write(data)
-            data = wf.readframes(playback_chunk)
-        stream.stop_stream()
-        stream.close()
-        wf.close()
-
-    def get_secrets(self):
-        return [f for f in os.listdir(SECRETS_DIR) if f.endswith('.wav')]
-
     def play_random_secret(self):
-        files = self.get_secrets()
-        filepath = os.path.join(SECRETS_DIR, random.choice(files))
-        print("Playing secret: ", filepath)
-        self.play_audio_file(filepath)
+        playback.play_random_secret(self.audio)
 
     def stop_recording_secret(self):
         self.is_recording = False

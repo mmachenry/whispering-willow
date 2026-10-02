@@ -2,6 +2,7 @@ import wave
 import random
 import os
 
+USE_SHELL = True
 SECRETS_DIR = "/home/whisperer/secrets"
 CHUNK = 1024
 
@@ -20,6 +21,9 @@ def play_audio_file(pa, filepath):
         stream.stop_stream()
         stream.close()
 
+def play_audio_file_from_shell(filepath):
+    subprocess.run(["aplay", filepath], check=True)
+
 def get_secrets():
     return [f for f in os.listdir(SECRETS_DIR) if f.endswith('.wav')]
 
@@ -27,4 +31,7 @@ def play_random_secret(pa):
     files = get_secrets()
     filepath = os.path.join(SECRETS_DIR, random.choice(files))
     print("Playing secret: ", filepath)
-    play_audio_file(pa, filepath)
+    if USE_SHELL:
+        play_audio_file_from_shell(filepath)
+    else:
+        play_audio_file(pa, filepath)
