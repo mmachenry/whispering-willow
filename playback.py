@@ -29,7 +29,8 @@ def play_audio_file_with_pyaudio(pa, filepath):
         stream.close()
 
 def play_audio_file_from_shell(filepath):
-    subprocess.run(["aplay", "-D", "plughw:0,0", filepath], check=True)
+    #subprocess.run(["aplay", "-D", "plughw:0,0", filepath], check=True)
+    subprocess.run(["aplay", "-D", "plughw:CARD=Headphones,DEV=0", filepath], check=True)
 
 def get_secrets():
     return [f for f in os.listdir(SECRETS_DIR) if f.endswith('.wav')]
