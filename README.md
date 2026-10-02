@@ -25,7 +25,12 @@ To get the latest code from Github to the RaspberryPi
 
 # install
 
-Copy willow.service to /etc/systemd/system/
+    sudo cp willow.service /etc/systemd/system/
+    sudo systemctl daemon-reload
+    sudo systemctl enable myscript.service
+    sudo systemctl start myscript.service
+    sudo systemctl status myscript.service
+
 
 # Notes on current setup
 To get the project to work, boot the RaspberryPi, ensure that it's on a
