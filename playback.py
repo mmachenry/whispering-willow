@@ -1,6 +1,7 @@
 import wave
 import random
 import os
+import subprocess
 
 USE_SHELL = True
 SECRETS_DIR = "/home/whisperer/secrets"
