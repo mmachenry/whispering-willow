@@ -23,6 +23,10 @@ To get the latest code from Github to the RaspberryPi
     cd /home/ivyblossom/src/whispering-willow
     git pull origin main
 
+# install
+
+Copy willow.service to /etc/systemd/system/
+
 # Notes on current setup
 To get the project to work, boot the RaspberryPi, ensure that it's on a
 WiFi network. Currently it auto logs on to PGH's WiFi and Magneato's home

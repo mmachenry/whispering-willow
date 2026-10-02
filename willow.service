@@ -1,0 +1,12 @@
+[Unit]
+Description=Whispering Willow
+After=network.target
+
+[Service]
+Type=simple
+User=whisperer
+ExecStart=/usr/bin/python /home/whisperer/src/whispering-willow/main.py
+Restart=on-failure
+
+[Install]
+WantedBy=multi-user.target
