@@ -9,6 +9,10 @@ Code to support the Weeping Willow art project at NECTR 2025
 
     sudo apt install portaudio19-dev python3-pyaudio
 
+In addition I did this to fix the bluetooth speaker not being found
+
+    sudo apt install pipewire-alsa
+
 # dev
     python -m venv venv
     source venv/bin/activate
