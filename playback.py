@@ -14,8 +14,8 @@ CHUNK = 1024
 PLAYBACK_VOLUME = 1.0
 
 # Segment limiter settings.
-LIMITER_THRESHOLD = 0.70
-LIMITER_CEILING = 0.85
+LIMITER_THRESHOLD = 0.5
+LIMITER_CEILING = 0.5
 LIMITER_RELEASE_MS = 120.0
 
 _volume_lock = threading.Lock()
