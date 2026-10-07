@@ -12,6 +12,9 @@ SECRETS_DIR = "/home/whisperer/secrets"
 CHUNK = 4096
 
 PLAYBACK_VOLUME = 1.0
+# Keep some headroom below digital full scale.  This is deliberately a
+# downward-only safety gain: ordinary files are not made quieter or louder.
+MAX_PEAK = 0.85
 _volume_lock = threading.Lock()
 
 
@@ -26,12 +29,37 @@ def _get_playback_volume(pa):
     with _volume_lock:
         return getattr(pa, '_playback_volume', PLAYBACK_VOLUME)
 
+
+def _file_peak_and_gain(wf, max_peak=MAX_PEAK):
+    """Return (peak, gain) for a PCM wave file.
+
+    The file is scanned once before playback.  Because the gain can only be
+    reduced, a loud recording cannot clip the output or overwhelm the
+    speakers when the speaker volume is set for normal recordings.
+    """
+    peak = 0
+    while True:
+        data = wf.readframes(CHUNK)
+        if not data:
+            break
+        peak = max(peak, audioop.max(data, wf.getsampwidth()))
+
+    wf.rewind()
+    full_scale = float(1 << (8 * wf.getsampwidth() - 1))
+    normalized_peak = peak / full_scale
+    if normalized_peak <= 0.0:
+        return 0.0, 1.0
+    return normalized_peak, min(1.0, max_peak / normalized_peak)
+
+
 def play_audio_file(pa, filepath):
     with wave.open(filepath, 'rb') as wf:
         sample_width = wf.getsampwidth()
         channels = wf.getnchannels()
         rate = wf.getframerate()
         audio_format = pa.get_format_from_width(sample_width)
+        peak, safety_gain = _file_peak_and_gain(wf)
+        print("Peak: {:.1%}; safety gain: {:.1%}".format(peak, safety_gain))
 
         # Use callback mode so PyAudio, rather than the Python loop, controls
         # the timing of writes to the ALSA/PipeWire output device.
@@ -48,7 +76,11 @@ def play_audio_file(pa, filepath):
 
             # Scale each callback's PCM data so a volume change takes effect
             # while a file is already playing.
-            data = audioop.mul(data, sample_width, _get_playback_volume(pa))
+            data = audioop.mul(
+                data,
+                sample_width,
+                _get_playback_volume(pa) * safety_gain,
+            )
             return data, status
 
         stream = pa.open(
