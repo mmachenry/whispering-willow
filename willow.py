@@ -42,7 +42,7 @@ class Willow:
         self.is_recording = False
 
     def start_recording_secret(self):
-        playback.set_playback_volume(w.audio, 0.1)
+        playback.set_playback_volume(self.audio, 0.1)
         self.is_recording = True
         timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
         filename = f"{playback.SECRETS_DIR}/secret_{timestamp}.wav"
