@@ -5,14 +5,12 @@ import os
 from datetime import datetime
 import playback
 
-SECRETS_DIR = "/home/whisperer/secrets"
-
 class Willow:
     def __init__(self):
         self.audio = pyaudio.PyAudio()
         self.is_recording = False
-        if not os.path.exists(SECRETS_DIR):
-            os.makedirs(SECRETS_DIR)
+        if not os.path.exists(playback.SECRETS_DIR):
+            os.makedirs(playback.SECRETS_DIR)
 
         # Audio configuration
         self.channels = 1
@@ -46,7 +44,7 @@ class Willow:
     def start_recording_secret(self):
         self.is_recording = True
         timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
-        filename = f"{SECRETS_DIR}/secret_{timestamp}.wav"
+        filename = f"{playback.SECRETS_DIR}/secret_{timestamp}.wav"
         print("Now recording: ", filename)
 
         try:
