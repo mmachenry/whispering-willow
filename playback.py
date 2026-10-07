@@ -7,7 +7,6 @@ import pyaudio
 import audioop
 import threading
 
-USE_SHELL = False
 SECRETS_DIR = "/home/whisperer/secrets"
 CHUNK = 4096
 
