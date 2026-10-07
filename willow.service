@@ -1,13 +1,14 @@
 [Unit]
 Description=Whispering Willow
-After=network.target
+After=network.target sound.target
 
 [Service]
-Type=simple
 User=whisperer
-Environment="XDG_RUNTIME_DIR=/run/user/1000"
-ExecStart=/usr/bin/python /home/whisperer/src/whispering-willow/main.py
+Group=whisperer
+WorkingDirectory=/home/whisperer/src/whispering-willow
+ExecStart=/usr/bin/python3 /home/whisperer/src/whispering-willow/main.py
 Restart=on-failure
+RestartSec=5s
 
 [Install]
 WantedBy=multi-user.target
