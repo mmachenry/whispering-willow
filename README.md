@@ -13,9 +13,9 @@ the software in the production environment.
     sudo apt install portaudio19-dev python3-pyaudio python3-audioop-lts pipewire-alsa
     sudo cp willow.service /etc/systemd/system/
     sudo systemctl daemon-reload
-    sudo systemctl enable myscript.service
-    sudo systemctl start myscript.service
-    sudo systemctl status myscript.service
+    sudo systemctl enable willow.service
+    sudo systemctl start willow.service
+    sudo systemctl status willow.service
 
 
 # dev
