@@ -4,18 +4,29 @@ import os
 import subprocess
 import time
 import pyaudio
+import audioop
+import threading
 
 USE_SHELL = False
 SECRETS_DIR = "/home/whisperer/secrets"
 CHUNK = 4096
 
-def play_audio_file(pa, filepath):
-    if USE_SHELL:
-        play_audio_file_from_shell(filepath)
-    else:
-        play_audio_file_with_pyaudio(pa, filepath)
+PLAYBACK_VOLUME = 1.0
+_volume_lock = threading.Lock()
 
-def play_audio_file_with_pyaudio(pa, filepath):
+
+def set_playback_volume(pa, volume):
+    """Set the volume used by active and future playback streams."""
+    volume = max(0.0, min(1.0, float(volume)))
+    with _volume_lock:
+        pa._playback_volume = volume
+
+
+def _get_playback_volume(pa):
+    with _volume_lock:
+        return getattr(pa, '_playback_volume', PLAYBACK_VOLUME)
+
+def play_audio_file(pa, filepath):
     with wave.open(filepath, 'rb') as wf:
         sample_width = wf.getsampwidth()
         channels = wf.getnchannels()
@@ -31,8 +42,14 @@ def play_audio_file_with_pyaudio(pa, filepath):
             data = wf.readframes(frame_count)
             if len(data) < frame_count * sample_width * channels:
                 finished = True
-                return data, pyaudio.paComplete
-            return data, pyaudio.paContinue
+                status = pyaudio.paComplete
+            else:
+                status = pyaudio.paContinue
+
+            # Scale each callback's PCM data so a volume change takes effect
+            # while a file is already playing.
+            data = audioop.mul(data, sample_width, _get_playback_volume(pa))
+            return data, status
 
         stream = pa.open(
             format=audio_format,
@@ -52,11 +69,6 @@ def play_audio_file_with_pyaudio(pa, filepath):
         finally:
             stream.stop_stream()
             stream.close()
-
-def play_audio_file_from_shell(filepath):
-    #subprocess.run(["aplay", filepath], check=True)
-    #subprocess.run(["aplay", "-D", "plughw:0,0", filepath], check=True)
-    subprocess.run(["aplay", "-D", "plughw:CARD=Headphones,DEV=0", filepath], check=True)
 
 def get_secrets():
     return [f for f in os.listdir(SECRETS_DIR) if f.endswith('.wav')]

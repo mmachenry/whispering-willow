@@ -42,11 +42,13 @@ class Willow:
         self.is_recording = False
 
     def start_recording_secret(self):
+        playback.set_playback_volume(w.audio, 0.1)
         self.is_recording = True
         timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
         filename = f"{playback.SECRETS_DIR}/secret_{timestamp}.wav"
         print("Now recording: ", filename)
 
+        stream = None
         try:
             stream = self.audio.open(
                 format=self.format,
@@ -66,6 +68,7 @@ class Willow:
             # Close stream
             stream.stop_stream()
             stream.close()
+            stream = None
 
             # Save file
             if frames:
@@ -87,3 +90,9 @@ class Willow:
 
         except Exception as e:
             print(f"Recording error: {e}")
+        finally:
+            if stream is not None:
+                stream.stop_stream()
+                stream.close()
+            # Recording is fully finished (including file writing) here.
+            playback.set_playback_volume(self.audio, 1.0)
