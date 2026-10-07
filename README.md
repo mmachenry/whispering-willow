@@ -3,15 +3,20 @@ Code to support the Weeping Willow art project at NECTR 2025
 
 # login
 
-    ssh ivyblossom@whisperingwillow.local #password whisperingwillow
+    ssh whisperer@whisperingwillow.local #password whispering
 
 # setup
 
-    sudo apt install portaudio19-dev python3-pyaudio
+On the Raspberry PI you'll need to take these steps to install
+the software in the production environment.
 
-In addition I did this to fix the bluetooth speaker not being found
+    sudo apt install portaudio19-dev python3-pyaudio python3-audioop-lts pipewire-alsa
+    sudo cp willow.service /etc/systemd/system/
+    sudo systemctl daemon-reload
+    sudo systemctl enable myscript.service
+    sudo systemctl start myscript.service
+    sudo systemctl status myscript.service
 
-    sudo apt install pipewire-alsa
 
 # dev
     python -m venv venv
@@ -22,15 +27,6 @@ To get the latest code from Github to the RaspberryPi
 
     cd /home/ivyblossom/src/whispering-willow
     git pull origin main
-
-# install
-
-    sudo cp willow.service /etc/systemd/system/
-    sudo systemctl daemon-reload
-    sudo systemctl enable myscript.service
-    sudo systemctl start myscript.service
-    sudo systemctl status myscript.service
-
 
 # Notes on current setup
 To get the project to work, boot the RaspberryPi, ensure that it's on a
@@ -58,21 +54,16 @@ to wire. You could also just make it light up all the time.
 
 SSH into the system and run this command:
 
-    python /home/ivyblossom/src/whispering-willow/art.py
+    python /home/whisperer/src/whispering-willow/main.py
 
 ary.py contains the main loop. willow.py contains the audio code. All other
 code in there is tests and debugging stuff. This should play audio files
 constantly and respond to the button press with a log message as well as
 recording an audio file. Press and hold the button to record a secret.
 
-Secrets are stored in /home/ivyblossom/secrets
+Secrets are stored in /home/whisperer/secrets
 
 You can copy any WAV file in there with scp if you want to add secrets to
 the directory. You can also play them and delete them using just unix
 commands. ffmpeg or mpv might be the easiest way to play them and listen to
 what's in the directory directly without the randomness of the art.
-
-# Further work
-
-* Make the art.py a daemon 
-* Set up an /etc/rc.local to run the program when the RaspberryPi boots.
